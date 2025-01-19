@@ -21,12 +21,14 @@ all_items = parsing.find_all('div', class_ = 'row p-1 entry-wrapper')
 
 #Extract the items named and it's prices
 item_names = [re.sub(r'[^a-zA-Z0-9\s]', '', item_name.find('div', class_ = 'col-md-12 col-12 title_product_catalog mb-md-1 main-text-area').text.strip()) for item_name in all_items]
-item_prices = [re.sub(r'[^0-9\s]', '', item_price.find('span', class_ = 'sr-only').text) for item_price in all_items]
+item_prices = [re.sub(r'[^0-9\s]', '', item_price.find('span', class_ = 'sr-only').text)+ "₪" for item_price in all_items]
 
 #Order the results as a CSV in a pandas dataFrame
-df = pd.DataFrame(columns= item_names)
-df.loc[len(df)+1] = item_prices
+df = pd.DataFrame(columns= ["Product","Price"])
+df["Product"] = item_names
+df["Price"] = item_prices
 
-df.to_csv(r'/Users/hamzajbara/Desktop/ScrapingAndSaving/SonyScraping.csv', index = False)
+#Add the path and uncomment
+#df.to_csv(r'/Users/Username/Where/Folder/Example.csv', index = False)
 
 
