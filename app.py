@@ -6,8 +6,7 @@ import pandas as pd
 
 app = Flask(__name__)
 
-def scrape_data():
-    url = "https://www.ivory.co.il/catalog.php?act=cat&q=sony"
+def scrape_data(url):
 
     headers = {
     'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36'
@@ -26,17 +25,19 @@ def scrape_data():
     df["Product"] = item_names
     df["Price"] = item_prices
 
+    return df.to_html(classes="table", index=False)
+
     #df.to_csv(r'/Users/Username/Where/Folder/Example.csv', index = False)
-
-    blad = df.to_html()
-
-    return blad
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        scraped_data = scrape_data()
+        url = "https://www.ivory.co.il/catalog.php?act=cat&q="
+        url += request.form.get("url")
+        if url:
+            scraped_data = scrape_data(url)
+        else:
+            scraped_data = None
         return render_template('index.html', table=scraped_data)
     return render_template('index.html', table=None, data=None)
 
