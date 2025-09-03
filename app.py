@@ -1,10 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, session
 import re
 import pandas as pd
 
 app = Flask(__name__)
+app.secret_key = "" #required, don't forget this!!!!
 
 def scrape_data(url):
 
@@ -34,12 +35,20 @@ def index():
     if request.method == 'POST':
         url = "https://www.ivory.co.il/catalog.php?act=cat&q="
         url += request.form.get("url")
-        if url:
-            scraped_data = scrape_data(url)
-        else:
-            scraped_data = None
-        return render_template('index.html', table=scraped_data)
-    return render_template('index.html', table=None, data=None)
+        scraped_data = scrape_data(url)
+        session['scraped_table'] = scraped_data
+        #print(url) #fixing the issue with formatting http request, example https://www.ivory.co.il/catalog.php?act=cat&q=amd ryzen 5.
+        return redirect(url_for('result'))
+    return render_template('index.html', table=None)
+
+@app.route('/res', methods=['POST','GET'])
+def result():
+    if request.method == 'GET':
+        table = session.pop('scraped_table', None)
+        return render_template('index.html', table=table)
+    return redirect(url_for('index'))
+    
 
 if __name__ == '__main__':
+
     app.run(debug=True)
