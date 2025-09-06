@@ -112,19 +112,26 @@
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
     </style>
 </head>
 <body>
-    <h1>Scrape Data</h1>
+    {% if table %}
+    <!-- Only show the results table + submit button -->
+    <form method="POST" action="{{ url_for('process') }}">
+        <button type="submit">Add to Tracker</button>
+        {{ table|safe }}
+    </form>
+    {% else %}
+    <!-- Only show the input dialog when no table exists -->
     <form method="POST" onsubmit="showLoader()">
-        <input type="text" name="url" placeholder="What are you looking for?" required>
+        <h1>Data Scraper</h1>
+        <input type="text" name="url" placeholder="What are you looking for?" 
+               style="padding: 8px; border-radius: 8px; border: 1px solid #ccc; width: 70%; margin-bottom: 15px;">
         <br>
         <button type="submit">Scrape Now</button>
         <div class="loader" id="loader"></div>
     </form>
-
-    {% if table %}
-        {{ table|safe }}
     {% endif %}
 
     <script>
