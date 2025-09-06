@@ -5,7 +5,8 @@ import re
 import pandas as pd
 
 app = Flask(__name__)
-app.secret_key = "" #required, don't forget this!!!!
+app.secret_key = "balasha" #required, don't forget this!!!!
+default_url = "https://www.ivory.co.il/catalog.php?act=cat&q="
 
 def scrape_data(url):
 
@@ -22,22 +23,20 @@ def scrape_data(url):
     item_names = [re.sub(r'[^a-zA-Z0-9\s]', '', item_name.find('div', class_ = 'col-md-12 col-12 title_product_catalog mb-md-1 main-text-area').text.strip()) for item_name in all_items]
     item_prices = [re.sub(r'[^0-9\s]', '', item_price.find('span', class_ = 'sr-only').text)+ "₪" for item_price in all_items]
 
-    df = pd.DataFrame(columns= ["Product","Price"])
+    df = pd.DataFrame(columns= ["Select","Product","Price"])
+    df["Select"] = [f'<input type="checkbox" name="row" value="{i}">' for i in range(len(item_names))]
     df["Product"] = item_names
     df["Price"] = item_prices
 
-    return df.to_html(classes="table", index=False)
-
-    #df.to_csv(r'/Users/Username/Where/Folder/Example.csv', index = False)
+    return df.to_html(classes="table", index=False, escape=False)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        url = "https://www.ivory.co.il/catalog.php?act=cat&q="
+        url = default_url
         url += request.form.get("url")
         scraped_data = scrape_data(url)
         session['scraped_table'] = scraped_data
-        #print(url) #fixing the issue with formatting http request, example https://www.ivory.co.il/catalog.php?act=cat&q=amd ryzen 5.
         return redirect(url_for('result'))
     return render_template('index.html', table=None)
 
@@ -47,7 +46,11 @@ def result():
         table = session.pop('scraped_table', None)
         return render_template('index.html', table=table)
     return redirect(url_for('index'))
-    
+
+@app.route('/process', methods=['POST'])
+def process():
+    selected_rows = request.form.getlist("row")  # list of checked values
+    return f"You selected rows: {', '.join(selected_rows)}"
 
 if __name__ == '__main__':
 
