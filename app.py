@@ -3,9 +3,10 @@ from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, redirect, url_for, session
 import re
 import pandas as pd
+import os
 
 app = Flask(__name__)
-app.secret_key = "" #required, don't forget this!!!!
+app.secret_key = "asdasdad" #required, don't forget this!!!!
 default_url = "https://www.ivory.co.il/catalog.php?act=cat&q="
 
 def scrape_data(url):
@@ -77,5 +78,6 @@ def process():
     return selected_products_result
 
 if __name__ == '__main__':
-
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Render sets $PORT
+    app.run(host="0.0.0.0", port=port)
+    #app.run(debug=True)
