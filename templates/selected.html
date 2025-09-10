@@ -190,6 +190,20 @@
             font-size: 1.1rem;
         }
 
+        .product-link {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid transparent;
+        }
+
+        .product-link:hover {
+            color: var(--success-color);
+            border-bottom: 1px solid var(--success-color);
+            text-decoration: none;
+        }
+
         .action-buttons {
             display: flex;
             gap: 1rem;
@@ -405,15 +419,17 @@
                 const productCount = rows.length;
                 document.getElementById('productCount').textContent = productCount;
                 
-                // Add product icons to each row
+                // Add product icons to each row and make them clickable
                 rows.forEach((row, index) => {
                     const cell = row.querySelector('td');
                     if (cell) {
                         const productName = cell.textContent.trim();
                         cell.innerHTML = `
                             <div class="product-item">
-                                <i class="fas fa-box product-icon"></i>
-                                <span>${productName}</span>
+                                <i class="fas fa-chart-line product-icon"></i>
+                                <a href="/product/${encodeProductName(productName)}" class="product-link">
+                                    ${productName}
+                                </a>
                             </div>
                         `;
                     }
@@ -425,6 +441,15 @@
             const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             document.getElementById('timestamp').textContent = timeString;
         });
+
+        // Helper function to encode product names for URLs
+        function encodeProductName(name) {
+            return name
+                .replace(/\s+/g, '_')           // Replace spaces with underscores
+                .replace(/\+/g, 'plus')         // Replace + with 'plus'
+                .replace(/[^\w\-_]/g, '')       // Remove special chars except - and _
+                .toLowerCase();                 // Convert to lowercase
+        }
     </script>
 </body>
 </html>
