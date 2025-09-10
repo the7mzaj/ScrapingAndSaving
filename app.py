@@ -19,6 +19,7 @@ def scrape_data(url):
     item_names = [re.sub(r'[^a-zA-Z0-9\s]', '', item_name.find('div', class_ = 'col-md-12 col-12 title_product_catalog mb-md-1 main-text-area').text.strip()) for item_name in all_items]
     item_prices = [re.sub(r'[^0-9\s]', '', item_price.find('span', class_ = 'sr-only').text)+ "₪" for item_price in all_items]
     session['item_prices'] = item_prices
+    session['item_names'] = item_names
     df = pd.DataFrame(columns= ["Select","Product","Price"])
     df["Select"] = [f'<label class="custom-checkbox"><input type="checkbox" name="row" value="{i}"><span class="checkmark"></span></label>' for i in range(len(item_names))]
     df["Product"] = item_names
@@ -28,38 +29,14 @@ def scrape_data(url):
 '''
 Returns the name of the item at the given index
 '''
-def items_indexer_name(url, idx):
-    headers = {
-    'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36'
-    }
-    req = requests.get(url, headers= headers)
-    parsing = BeautifulSoup(req.text, 'lxml')
-    all_items = parsing.find_all('div', class_ = 'row p-1 entry-wrapper')
-    item_names = [re.sub(r'[^a-zA-Z0-9\s]', '', item_name.find('div', class_ = 'col-md-12 col-12 title_product_catalog mb-md-1 main-text-area').text.strip()) for item_name in all_items]
-    return item_names[idx]
+def items_indexer_name(idx):
+    return session['item_names'][idx]
 
 '''
 Returns the price of the item at the given index
 '''
-def items_indexer_price(url, idx):
-    headers = {
-    'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36'
-    }
-    req = requests.get(url, headers= headers)
-    parsing = BeautifulSoup(req.text, 'lxml')
-    all_items = parsing.find_all('div', class_ = 'row p-1 entry-wrapper')
-    item_prices = [re.sub(r'[^0-9\s]', '', item_price.find('span', class_ = 'sr-only').text)+ "₪" for item_price in all_items]
-    return item_prices[idx]
-
-def column_length(url):
-    headers = {
-    'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36'
-    }
-    req = requests.get(url, headers= headers)
-    parsing = BeautifulSoup(req.text, 'lxml')
-    all_items = parsing.find_all('div', class_ = 'row p-1 entry-wrapper')
-    return len([re.sub(r'[^a-zA-Z0-9\s]', '', item_name.find('div', class_ = 'col-md-12 col-12 title_product_catalog mb-md-1 main-text-area').text.strip()) for item_name in all_items])
-
+def items_indexer_price(idx):
+    return session['item_prices'][idx]
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -92,8 +69,8 @@ def process():
     selected_rows_dict = dict.fromkeys(selected_rows)
     selected_rows_prices = dict.fromkeys(selected_rows)
     for i in range(len(selected_rows)):
-        selected_rows_dict[i] = items_indexer_name(url, i)
-        selected_rows_prices[i] = items_indexer_price(url, i)
+        selected_rows_dict[i] = items_indexer_name(i)
+        selected_rows_prices[i] = items_indexer_price(i)
     for key in selected_rows_dict:
         selected_products_result.append(selected_rows_dict[key])
         selected_products_prices.append(selected_rows_prices[key])
@@ -103,6 +80,14 @@ def process():
     })
     table_html = df.to_html(classes="products-table", index=False, escape=False)
     return render_template('selected.html', table=table_html)
+
+@app.route('/product/<product_name>')
+def product_graph(product_name):
+    # Decode the product name (replace underscores with spaces)
+    decoded_name = product_name.replace('_', ' ')
+    
+    # For now, just return a simple message
+    return f"<h1>Product: {decoded_name}</h1><p>This is where the price graph will be!</p><a href='/'>Back to Search</a>"
 
 if __name__ == '__main__':
     #port = int(os.environ.get("PORT", 5))  # Render sets $PORT
