@@ -9,7 +9,16 @@ app = Flask(__name__)
 app.secret_key = "asdasdad" #required, don't forget this!!!!
 default_url = "https://www.ivory.co.il/catalog.php?act=cat&q="
 
+search_cache = {}
+CACHE_LENGTH_LIMIT = 50
+
 def scrape_data(url):
+
+    if url in search_cache:
+        print("Cache hit")
+        return search_cache[url] #url is a key not an index
+
+    print("Cache miss") #doesn't exist in cache, let's scrape it.
 
     headers = {
     'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36'
@@ -31,7 +40,15 @@ def scrape_data(url):
         "Price": item_prices
     })
 
-    return df.to_html(classes="table", index=False, escape=False)
+    result = df.to_html(classes="table", index=False, escape=False)
+
+    #let's add the result to the cache
+    if len(search_cache) >= CACHE_LENGTH_LIMIT:
+        oldest_key = next(iter(search_cache))
+        del search_cache[oldest_key]
+
+    search_cache[url] = result
+    return result
 
 '''
 Returns the name of the item at the given index
@@ -83,10 +100,12 @@ def process():
 
     selected_rows_dict = dict.fromkeys(selected_rows)
     selected_rows_prices = dict.fromkeys(selected_rows)
+    list_of_keys = list(selected_rows_dict.keys())
+    list_of_prices = list(selected_rows_prices.keys())
 
     for i in range(len(selected_rows)):
-        selected_rows_dict[i] = items_indexer_name(list(selected_rows_dict.keys())[i])
-        selected_rows_prices[i] = items_indexer_price(list(selected_rows_prices.keys())[i])
+        selected_rows_dict[i] = items_indexer_name(list_of_keys[i])
+        selected_rows_prices[i] = items_indexer_price(list_of_prices[i])
 
     for key in selected_rows_dict:
         if selected_rows_dict[key] is None:
@@ -112,6 +131,6 @@ def product_graph(product_name):
     return f"<h1>Product: {decoded_name}</h1><p>This is where the price graph will be!</p><a href='/'>Back to Search</a>"
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5))  # Render sets $PORT
-    app.run(host="0.0.0.0", port=port)
-    #app.run(debug=True)
+    #port = int(os.environ.get("PORT", 5))  # Render sets $PORT
+    #app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
