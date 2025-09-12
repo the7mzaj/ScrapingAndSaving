@@ -1,4 +1,7 @@
 venv/
+screnv/
 __pycache__/
+*.pyo
+*.pyd
 *.pyc
-
+.DS_Store

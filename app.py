@@ -1,9 +1,21 @@
 import requests
 from bs4 import BeautifulSoup
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import re
 import pandas as pd
 import os
+
+users_db = {}
+user_sessions = {}
+
+class User(UserMixin):
+    def __init__(self, user_id, email, first_name, last_name):
+        self.id = user_id
+        self.email = email
+        self.first_name = first_name
+        self.last_name = last_name
 
 app = Flask(__name__)
 app.secret_key = "asdasdad" #required, don't forget this!!!!
@@ -11,6 +23,93 @@ default_url = "https://www.ivory.co.il/catalog.php?act=cat&q="
 
 search_cache = {}
 CACHE_SIZE_LIMIT = 50
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+'''
+Loads the user from the database.
+'''
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id in users_db:
+        user_data = users_db[user_id] #if the user exists in the db,
+        return User(user_id, user_data['email'], user_data['first_name'], user_data['last_name']) #return it
+    return None
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        # Get form data
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        for user_id, user_data in users_db.items():
+            if user_data['email'] == email:
+                flash('Email already registered!', 'error')
+                return render_template('register.html')
+            
+        user_id = str(len(users_db) + 1)
+        hashed_password = generate_password_hash(password)
+
+        users_db[user_id] = {
+            'email': email,
+            'first_name': first_name,
+            'last_name': last_name,
+            'password': hashed_password
+        }
+        flash('Registration successful! Please login.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        # Find user by email
+        user_found = None
+        for user_id, user_data in users_db.items():
+            if user_data['email'] == email:
+                user_found = (user_id, user_data)
+                break
+        
+        if user_found and check_password_hash(user_found[1]['password'], password):
+            # Login successful
+            user = User(user_found[0], user_found[1]['email'], 
+                      user_found[1]['first_name'], user_found[1]['last_name'])
+            login_user(user)
+            flash('Login successful!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid email or password!', 'error')
+            return render_template('login.html')
+    
+    return render_template('login.html')
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    stats = {
+        'total_products': 0, 
+        'tracked_products': 0, 
+        'price_alerts': 0  
+    }
+    return render_template('dashboard.html', user=current_user, stats=stats)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('index'))
+
+'''
+Scrapes the data from the given url and returns the html table using pandas.
+'''
 
 def scrape_data(url):
 
@@ -139,6 +238,6 @@ def product_graph(product_name):
     return f"<h1>Product: {decoded_name}</h1><p>This is where the price graph will be!</p><a href='/'>Back to Search</a>"
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5))  # Render sets $PORT
-    app.run(host="0.0.0.0", port=port)
-    #app.run(debug=True)
+    #port = int(os.environ.get("PORT", 5))  # Render sets $PORT
+    #app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
