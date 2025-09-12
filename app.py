@@ -10,7 +10,7 @@ app.secret_key = "asdasdad" #required, don't forget this!!!!
 default_url = "https://www.ivory.co.il/catalog.php?act=cat&q="
 
 search_cache = {}
-CACHE_LENGTH_LIMIT = 50
+CACHE_SIZE_LIMIT = 50
 
 def scrape_data(url):
 
@@ -43,7 +43,7 @@ def scrape_data(url):
     result = df.to_html(classes="table", index=False, escape=False)
 
     #let's add the result to the cache
-    if len(search_cache) >= CACHE_LENGTH_LIMIT:
+    if len(search_cache) >= CACHE_SIZE_LIMIT:
         oldest_key = next(iter(search_cache))
         del search_cache[oldest_key]
 
@@ -64,19 +64,27 @@ def items_indexer_price(idx):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-
-    if request.method == 'POST':
-        url = default_url
-        user_request = request.form.get("url")
-        url += user_request
-        scraped_data = scrape_data(url)
-        session['scraped_table'] = scraped_data
-        session['requested_item'] = user_request
-
-        return redirect(url_for('result'))
-
-    return render_template('index.html', table=None)
-
+    try:
+        if request.method == 'POST':
+            user_request = request.form.get("url")
+            if not user_request or not user_request.strip(): #if empty or spaces only.
+                return render_template('index.html', error="Please enter a product name.")
+            
+            url = default_url + user_request.strip()
+            scraped_data = scrape_data(url)
+            session['scraped_table'] = scraped_data
+            session['requested_item'] = user_request
+            return redirect(url_for('result'))
+        
+        return render_template('index.html', table=None)
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Network error: {e}")
+        return render_template('index.html', error="Unable to connect to the website. Please try again.")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return render_template('index.html', error="An error occurred. Please try again.")
+        
 @app.route('/res', methods=['POST','GET'])
 def result():
 
