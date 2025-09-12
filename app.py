@@ -131,6 +131,6 @@ def product_graph(product_name):
     return f"<h1>Product: {decoded_name}</h1><p>This is where the price graph will be!</p><a href='/'>Back to Search</a>"
 
 if __name__ == '__main__':
-    #port = int(os.environ.get("PORT", 5))  # Render sets $PORT
-    #app.run(host="0.0.0.0", port=port)
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5))  # Render sets $PORT
+    app.run(host="0.0.0.0", port=port)
+    #app.run(debug=True)
