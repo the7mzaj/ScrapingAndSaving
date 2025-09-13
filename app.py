@@ -6,9 +6,58 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 import re
 import pandas as pd
 import os
+import sqlite3
 
-users_db = {}
-user_sessions = {}
+# Database setup
+DATABASE = 'users.db'
+
+def init_db():
+    """Initialize the database with users table"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            password TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def get_user_by_email(email):
+    """Get user by email from database"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
+def get_user_by_id(user_id):
+    """Get user by ID from database"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
+def create_user(email, first_name, last_name, password):
+    """Create a new user in database"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO users (email, first_name, last_name, password)
+        VALUES (?, ?, ?, ?)
+    ''', (email, first_name, last_name, password))
+    user_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return user_id
 
 class User(UserMixin):
     def __init__(self, user_id, email, first_name, last_name):
@@ -21,6 +70,9 @@ app = Flask(__name__)
 app.secret_key = "asdasdad" #required, don't forget this!!!!
 default_url = "https://www.ivory.co.il/catalog.php?act=cat&q="
 
+# Initialize database
+init_db()
+
 search_cache = {}
 CACHE_SIZE_LIMIT = 50
 
@@ -32,33 +84,27 @@ Loads the user from the database.
 '''
 @login_manager.user_loader
 def load_user(user_id):
-    if user_id in users_db:
-        user_data = users_db[user_id] #if the user exists in the db,
-        return User(user_id, user_data['email'], user_data['first_name'], user_data['last_name']) #return it
+    user_data = get_user_by_id(user_id)
+    if user_data:
+        # user_data is a tuple: (id, email, first_name, last_name, password, created_at)
+        return User(user_data[0], user_data[1], user_data[2], user_data[3])
     return None
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        # Get form data
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
         email = request.form.get('email')
         password = request.form.get('password')
-        for user_id, user_data in users_db.items():
-            if user_data['email'] == email:
-                flash('Email already registered!', 'error')
-                return render_template('register.html')
-            
-        user_id = str(len(users_db) + 1)
+        # Check if email already exists
+        if get_user_by_email(email):
+            flash('Email already registered!', 'error')
+            return render_template('register.html')
+        
+        # Create new user
         hashed_password = generate_password_hash(password)
-
-        users_db[user_id] = {
-            'email': email,
-            'first_name': first_name,
-            'last_name': last_name,
-            'password': hashed_password
-        }
+        user_id = create_user(email, first_name, last_name, hashed_password)
         flash('Registration successful! Please login.', 'success')
         return redirect(url_for('login'))
     
@@ -71,16 +117,11 @@ def login():
         password = request.form.get('password')
         
         # Find user by email
-        user_found = None
-        for user_id, user_data in users_db.items():
-            if user_data['email'] == email:
-                user_found = (user_id, user_data)
-                break
+        user_data = get_user_by_email(email)
         
-        if user_found and check_password_hash(user_found[1]['password'], password):
-            # Login successful
-            user = User(user_found[0], user_found[1]['email'], 
-                      user_found[1]['first_name'], user_found[1]['last_name'])
+        if user_data and check_password_hash(user_data[4], password):
+            # Login successful - user_data is (id, email, first_name, last_name, password, created_at)
+            user = User(user_data[0], user_data[1], user_data[2], user_data[3])
             login_user(user)
             flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))

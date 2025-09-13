@@ -313,9 +313,9 @@
 
             <div class="user-menu">
                 <div class="user-avatar">
-                    {{ user.first_name[0] }}{{ user.last_name[0] }}
+                    {{ user.first_name[0]|capitalize }}{{ user.last_name[0]|capitalize }}
                 </div>
-                <span>{{ user.first_name }} {{ user.last_name }}</span>
+                <span>{{ user.first_name|capitalize }} {{ user.last_name|capitalize }}</span>
                 <a href="/logout" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </a>

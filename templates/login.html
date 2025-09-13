@@ -173,24 +173,30 @@
             color: var(--primary-color);
         }
 
-        .error-message {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--error-color);
-            color: var(--error-color);
+        .error-message, .success-message, .info-message {
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 20px;
             font-size: 14px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
         }
 
         .success-message {
             background: rgba(16, 185, 129, 0.1);
             border: 1px solid var(--success-color);
             color: var(--success-color);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
+        }
+
+        .info-message {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
         }
 
         .back-home {
@@ -230,17 +236,15 @@
             <p>Sign in to your account to track products</p>
         </div>
 
-        {% if error %}
-        <div class="error-message">
-            <i class="fas fa-exclamation-triangle"></i> {{ error }}
-        </div>
-        {% endif %}
-
-        {% if success %}
-        <div class="success-message">
-            <i class="fas fa-check-circle"></i> {{ success }}
-        </div>
-        {% endif %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="{% if category == 'error' %}error-message{% elif category == 'success' %}success-message{% else %}info-message{% endif %}">
+                        <i class="fas fa-{% if category == 'error' %}exclamation-triangle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %}"></i> {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
         <form method="POST" action="/login">
             <div class="form-group">
@@ -270,6 +274,20 @@
             btn.classList.add('btn-loading');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
+        });
+
+        // Auto-hide flash messages after 3 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.error-message, .success-message, .info-message');
+            flashMessages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.opacity = '0';
+                    message.style.transform = 'translateY(-10px)';
+                    setTimeout(function() {
+                        message.remove();
+                    }, 300);
+                }, 3000);
+            });
         });
     </script>
 </body>
